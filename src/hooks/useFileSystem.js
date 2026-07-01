@@ -135,6 +135,11 @@ export const useFileSystem = (showToast, setHighlightedFile) => {
     const connectFolder = async () => {
         try {
             const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            // On macOS, showDirectoryPicker grants access but queryPermission() may still
+            // return 'prompt' until requestPermission() is called while the user gesture
+            // is still active. Without this, syncLibrary exits early on Mac and no files load.
+            const perm = await handle.requestPermission({ mode: 'readwrite' });
+            if (perm !== 'granted') return;
             setDirectoryHandle(handle);
             setIsHandleAuthorized(true);
             await storageManager.setSetting('workspace_handle', handle);
@@ -150,6 +155,9 @@ export const useFileSystem = (showToast, setHighlightedFile) => {
             const state = await directoryHandle.requestPermission({ mode: 'readwrite' });
             if (state === 'granted') {
                 setIsHandleAuthorized(true);
+                // Small yield so queryPermission reflects the new grant on macOS
+                // before syncLibrary checks it.
+                await new Promise(r => setTimeout(r, 0));
                 await syncLibrary(directoryHandle);
             }
         } catch (err) {
