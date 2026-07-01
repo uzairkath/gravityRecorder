@@ -13,6 +13,7 @@ export const HistorySidebar = ({
     libraryFiles,
     thumbnailMap,
     getThumbnailUrl,
+    isRecording,
     highlightedFile,
     playVideo,
     editingFileName,
@@ -104,7 +105,7 @@ export const HistorySidebar = ({
                             ) : (
                                 libraryFiles.map(file => {
                                     if (!thumbnailMap[file.name]) {
-                                        getThumbnailUrl(file.name, file.handle, directoryHandle);
+                                        getThumbnailUrl(file.name, file.handle, directoryHandle, isRecording);
                                     }
 
                                     return (

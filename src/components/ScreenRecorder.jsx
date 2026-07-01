@@ -116,6 +116,7 @@ const ScreenRecorder = () => {
                 a.href = url;
                 a.download = fileName;
                 a.click();
+                URL.revokeObjectURL(url);
                 showToast('Direct save failed', 'Download triggered as fallback', 'error');
             }
         } else {
@@ -124,6 +125,7 @@ const ScreenRecorder = () => {
             a.href = url;
             a.download = fileName;
             a.click();
+            URL.revokeObjectURL(url);
             showToast('Recording Saved', 'Check your downloads folder', 'success');
         }
         setPendingRecording(null);
@@ -370,13 +372,16 @@ const ScreenRecorder = () => {
     }, [setDirectoryHandle, setIsHandleAuthorized]);
 
     useEffect(() => {
-        if (isHistoryOpen && directoryHandle) {
+        if (isHistoryOpen && directoryHandle && !isRecording) {
             syncLibrary(directoryHandle, { googleToken, auditCloudRegistry, loadCloudMetadata });
         }
-    }, [isHistoryOpen, directoryHandle, googleToken, auditCloudRegistry, loadCloudMetadata, syncLibrary]);
+    }, [isHistoryOpen, directoryHandle, isRecording, googleToken, auditCloudRegistry, loadCloudMetadata, syncLibrary]);
+
+    const isLaunchingRef = useRef(false);
 
     const startRecording = useCallback(() => {
-        if (isRecording || countdown !== null) return;
+        if (isRecording || countdown !== null || isLaunchingRef.current) return;
+        isLaunchingRef.current = true;
         setCountdown(3);
         countdownTimerRef.current = setInterval(() => {
             setCountdown(prev => {
@@ -386,6 +391,7 @@ const ScreenRecorder = () => {
                         countdownTimerRef.current = null;
                     }
                     startMediaRecording();
+                    isLaunchingRef.current = false;
                     return null;
                 }
                 return prev - 1;
@@ -477,6 +483,7 @@ const ScreenRecorder = () => {
                 libraryFiles={libraryFiles}
                 thumbnailMap={thumbnailMap}
                 getThumbnailUrl={getThumbnailUrl}
+                isRecording={isRecording}
                 highlightedFile={highlightedFile}
                 playVideo={playVideo}
                 editingFileName={editingFileName}

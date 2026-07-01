@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { storageManager } from '../utils/StorageManager';
 import { getFileSignature } from '../utils/FileUtils';
 
@@ -11,21 +11,33 @@ export const useFileSystem = (showToast, setHighlightedFile) => {
     const [editingFileName, setEditingFileName] = useState(null);
     const [newName, setNewName] = useState('');
     const [selectedVideoUrl, setSelectedVideoUrl] = useState(null);
+    const isSyncingRef = useRef(false);
 
     const generateThumbnail = async (videoBlob, videoName, dirHandle) => {
+        const videoObjectUrl = URL.createObjectURL(videoBlob);
         const video = document.createElement('video');
-        video.src = URL.createObjectURL(videoBlob);
+        video.src = videoObjectUrl;
         video.currentTime = 1;
 
         return new Promise((resolve) => {
+            const cleanup = () => URL.revokeObjectURL(videoObjectUrl);
+
+            video.onerror = () => {
+                console.warn('Thumbnail generation skipped: video could not be decoded:', videoName);
+                cleanup();
+                resolve();
+            };
+
             video.onloadeddata = async () => {
                 const canvas = document.createElement('canvas');
-                canvas.width = 160;   // Nano thumbnails
+                canvas.width = 160;
                 canvas.height = 90;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
                 canvas.toBlob(async (thumbBlob) => {
+                    cleanup();
+                    if (!thumbBlob) { resolve(); return; }
                     try {
                         const assetsHandle = await dirHandle.getDirectoryHandle('.recorder_assets', { create: true });
                         const thumbName = videoName.replace(/\.[^/.]+$/, "") + ".jpg";
@@ -39,14 +51,13 @@ export const useFileSystem = (showToast, setHighlightedFile) => {
                     } catch (err) {
                         console.error('Thumbnail save failed:', err);
                     }
-                    URL.revokeObjectURL(video.src);
                     resolve();
                 }, 'image/jpeg', 0.7);
             };
         });
     };
 
-    const getThumbnailUrl = async (videoName, videoHandle, dirHandle) => {
+    const getThumbnailUrl = async (videoName, videoHandle, dirHandle, isRecording = false) => {
         if (thumbnailMap[videoName] || processingQueue.has(videoName)) return;
 
         setProcessingQueue(prev => new Set(prev).add(videoName));
@@ -61,11 +72,13 @@ export const useFileSystem = (showToast, setHighlightedFile) => {
                 const url = URL.createObjectURL(file);
                 setThumbnailMap(prev => ({ ...prev, [videoName]: url }));
             } catch {
-                // If we are recording right now, don't generate new thumbnails (Save CPU)
-                // This is a crucial heuristic to prevent recording lag
+                // Skip generating new thumbnails while recording — video decode + canvas
+                // draw compete directly with the render loop on the main thread.
+                if (isRecording) return;
                 const videoFile = await videoHandle.getFile();
                 await generateThumbnail(videoFile, videoName, dirHandle || directoryHandle);
             }
+
         } catch (err) {
             console.warn('Thumbnail engine error:', err);
         } finally {
@@ -79,6 +92,8 @@ export const useFileSystem = (showToast, setHighlightedFile) => {
 
     const syncLibrary = useCallback(async (handle = directoryHandle, googleOps = {}) => {
         if (!handle) return;
+        if (isSyncingRef.current) return;
+        isSyncingRef.current = true;
 
         // Note: googleOps will be used in Phase 4 for cloud audit integration
         if (googleOps.loadCloudMetadata) await googleOps.loadCloudMetadata(handle);
@@ -112,6 +127,8 @@ export const useFileSystem = (showToast, setHighlightedFile) => {
         } catch (err) {
             console.error('History sync failed:', err);
             if (err.name === 'NotAllowedError') setIsHandleAuthorized(false);
+        } finally {
+            isSyncingRef.current = false;
         }
     }, [directoryHandle]);
 
