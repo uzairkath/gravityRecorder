@@ -51,7 +51,7 @@
 
 .blog-card:hover {
     transform: translateY(-8px);
-    border-color: rgba(139, 92, 246, 0.4);
+    border-color: rgba(59, 130, 246, 0.4);
     background: rgba(255, 255, 255, 0.05);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
@@ -76,7 +76,7 @@
 
 .blog-card-date {
     font-size: 0.75rem;
-    color: #8b5cf6;
+    color: var(--primary);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -156,7 +156,7 @@
 }
 
 .post-category {
-    color: #8b5cf6;
+    color: var(--primary);
     font-weight: 700;
     font-size: 0.9rem;
     text-transform: uppercase;
@@ -233,8 +233,8 @@
 }
 
 .post-content th {
-    background: rgba(139, 92, 246, 0.1);
-    color: #8b5cf6;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary);
     font-weight: 700;
     text-align: left;
     padding: 1rem 1.5rem;
@@ -257,15 +257,15 @@
 }
 
 .post-content td strong {
-    color: #8b5cf6;
+    color: var(--primary);
 }
 
 .post-cta {
     margin-top: auto;
     padding: 5rem 2rem;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(30, 27, 75, 0.4) 100%);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(12, 26, 62, 0.4) 100%);
     border-radius: 32px;
-    border: 1px solid rgba(139, 92, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.2);
     text-align: center;
     margin-top: 8rem;
     display: flex;

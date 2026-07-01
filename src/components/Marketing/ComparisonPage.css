@@ -87,16 +87,16 @@
 }
 
 .highlight-row td {
-    background: rgba(139, 92, 246, 0.03);
+    background: rgba(59, 130, 246, 0.03);
 }
 
 .badge-gravity {
-    color: #a78bfa;
-    background: rgba(139, 92, 246, 0.1);
+    color: #60a5fa;
+    background: rgba(59, 130, 246, 0.1);
     padding: 0.25rem 0.75rem;
     border-radius: 99px;
     font-size: 0.9rem;
-    border: 1px solid rgba(139, 92, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 /* Footer Section */

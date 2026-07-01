@@ -19,10 +19,10 @@
     height: 100%;
     z-index: 0;
     background:
-        radial-gradient(circle at 0% 0%, rgba(100, 108, 255, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 100% 0%, rgba(159, 122, 234, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 50% 50%, rgba(100, 108, 255, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 100% 100%, rgba(100, 108, 255, 0.1) 0%, transparent 50%);
+        radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
     filter: blur(80px);
     animation: mesh-flow 20s ease-in-out infinite alternate;
 }
@@ -113,12 +113,12 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.5rem 1.25rem;
-    background: rgba(100, 108, 255, 0.08);
-    border: 1px solid rgba(100, 108, 255, 0.2);
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.2);
     border-radius: 100px;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #a5b4fc;
+    color: #93c5fd;
     margin-bottom: 2rem;
 }
 
@@ -133,15 +133,15 @@
 
 @keyframes shadow-pulse {
     0% {
-        box-shadow: 0 0 0 0 rgba(100, 108, 255, 0.4);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
     }
 
     70% {
-        box-shadow: 0 0 0 10px rgba(100, 108, 255, 0);
+        box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
     }
 
     100% {
-        box-shadow: 0 0 0 0 rgba(100, 108, 255, 0);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
     }
 }
 
@@ -154,7 +154,7 @@
 }
 
 .text-gradient {
-    background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -199,13 +199,13 @@
 }
 
 .btn-glow {
-    box-shadow: 0 0 40px rgba(100, 108, 255, 0.3);
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
     transition: all 0.3s;
 }
 
 .btn-glow:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 60px rgba(100, 108, 255, 0.5);
+    box-shadow: 0 0 60px rgba(59, 130, 246, 0.5);
 }
 
 .hero-social {
@@ -402,7 +402,7 @@
 .mockup-webcam {
     width: 80px;
     height: 80px;
-    background: linear-gradient(135deg, #646cff, #9f7aea);
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
     border-radius: 16px;
     position: absolute;
     bottom: 15px;
@@ -491,13 +491,13 @@
 .feature-card-premium:hover {
     transform: translateY(-12px) scale(1.02);
     background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(100, 108, 255, 0.3);
+    border-color: rgba(59, 130, 246, 0.3);
 }
 
 .feature-icon-wrapper {
     width: 64px;
     height: 64px;
-    background: rgba(100, 108, 255, 0.1);
+    background: rgba(59, 130, 246, 0.1);
     border-radius: 20px;
     display: flex;
     align-items: center;
@@ -521,7 +521,7 @@
 /* Video Showcase Premium */
 .showcase-section-premium {
     padding: 10rem 4rem;
-    background: rgba(100, 108, 255, 0.02);
+    background: rgba(59, 130, 246, 0.02);
 }
 
 .showcase-content {
@@ -601,7 +601,7 @@
 .manifesto-card {
     padding: 6rem 4rem;
     text-align: center;
-    background: radial-gradient(circle at top right, rgba(100, 108, 255, 0.1), transparent);
+    background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent);
 }
 
 .github-logo {
@@ -725,8 +725,8 @@
 
 .comparison-table td.highlight,
 .comparison-table th.highlight {
-    color: #818cf8;
-    background: rgba(129, 140, 248, 0.05);
+    color: var(--primary);
+    background: rgba(59, 130, 246, 0.05);
 }
 
 .comparison-table tr:last-child td {
@@ -755,13 +755,13 @@
 }
 
 .faq-item:hover {
-    border-color: rgba(129, 140, 248, 0.2);
+    border-color: rgba(59, 130, 246, 0.2);
     background: rgba(255, 255, 255, 0.02);
 }
 
 .faq-item.active {
-    border-color: rgba(129, 140, 248, 0.4);
-    background: rgba(129, 140, 248, 0.03);
+    border-color: rgba(59, 130, 246, 0.4);
+    background: rgba(59, 130, 246, 0.03);
 }
 
 .faq-question {
@@ -780,7 +780,7 @@
 
 .faq-icon {
     font-size: 1.5rem;
-    color: #818cf8;
+    color: var(--primary);
     font-weight: 300;
 }
 
