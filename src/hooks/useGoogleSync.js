@@ -18,13 +18,14 @@ export const useGoogleSync = (showToast, directoryHandle) => {
 
     const loadCloudMetadata = useCallback(async (dirHandle) => {
         try {
-            const assetsHandle = await dirHandle.getDirectoryHandle('.recorder_assets', { create: true });
-            const metaHandle = await assetsHandle.getFileHandle('metadata.json', { create: true });
+            const assetsHandle = await dirHandle.getDirectoryHandle('.recorder_assets', { create: false }).catch(() => null);
+            if (!assetsHandle) return {};
+            const metaHandle = await assetsHandle.getFileHandle('metadata.json', { create: false }).catch(() => null);
+            if (!metaHandle) return {};
             const file = await metaHandle.getFile();
             const text = await file.text();
             if (text) {
                 const data = JSON.parse(text);
-                // Only update state if data is actually different to avoid unnecessary re-renders
                 if (JSON.stringify(data) !== JSON.stringify(cloudRegistryRef.current)) {
                     setCloudRegistry(data);
                 }
@@ -65,22 +66,23 @@ export const useGoogleSync = (showToast, directoryHandle) => {
 
         isAuditing.current = true;
         try {
+            // Paginate through all Drive files to avoid the 1000-file cap
             const query = encodeURIComponent("trashed = false");
-            const url = `https://www.googleapis.com/drive/v3/files?pageSize=1000&q=${query}&fields=files(id)`;
+            const remoteIds = new Set();
+            let pageToken = null;
 
-            const resp = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            do {
+                const pageParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
+                const url = `https://www.googleapis.com/drive/v3/files?pageSize=1000&q=${query}&fields=nextPageToken,files(id)${pageParam}`;
+                const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
 
-            if (resp.status === 401) {
-                isAuditing.current = false;
-                return;
-            }
+                if (resp.status === 401) { isAuditing.current = false; return; }
+                if (!resp.ok) break;
 
-            if (!resp.ok) return;
-
-            const { files } = await resp.json();
-            const remoteIds = new Set((files || []).map(f => f.id));
+                const body = await resp.json();
+                (body.files || []).forEach(f => remoteIds.add(f.id));
+                pageToken = body.nextPageToken || null;
+            } while (pageToken);
 
             let cleaned = false;
             const newRegistry = { ...registryToAudit };
@@ -137,7 +139,7 @@ export const useGoogleSync = (showToast, directoryHandle) => {
         // Redirect happens here
     }, [googleToken, showToast]);
 
-    const uploadToDrive = async (fileHandle) => {
+    const uploadToDrive = useCallback(async (fileHandle, _retryCount = 0) => {
         handleGoogleAuth(async (token) => {
             const file = await fileHandle.getFile();
             const signature = getFileSignature(file);
@@ -151,7 +153,7 @@ export const useGoogleSync = (showToast, directoryHandle) => {
                     mimeType: file.type || 'video/webm',
                 };
 
-                let response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -161,11 +163,16 @@ export const useGoogleSync = (showToast, directoryHandle) => {
                 });
 
                 if (response.status === 401) {
-                    handleGoogleAuth(async (newToken) => {
-                        uploadToDrive(fileHandle);
-                    }, false, () => {
+                    if (_retryCount >= 1) {
+                        // Token refresh also failed — give up and sign out
+                        showToast('Session Expired', 'Please reconnect Google Drive', 'error');
                         handleLogout();
-                    }, true);
+                        return;
+                    }
+                    // Try once with a fresh token
+                    handleGoogleAuth(async () => {
+                        uploadToDrive(fileHandle, _retryCount + 1);
+                    }, false, handleLogout, true);
                     return;
                 }
 
@@ -194,7 +201,9 @@ export const useGoogleSync = (showToast, directoryHandle) => {
                 });
                 const { webViewLink } = await fileInfoResp.json();
 
-                const newMeta = { ...cloudRegistry, [signature]: { driveId: driveFile.id, shareLink: webViewLink } };
+                // Read the registry from the ref so we always merge onto the latest version,
+                // not the stale closure value captured when uploadToDrive was called.
+                const newMeta = { ...cloudRegistryRef.current, [signature]: { driveId: driveFile.id, shareLink: webViewLink } };
                 await saveCloudMetadata(newMeta);
 
                 showToast('Cloud Sync Success', `${fileName} is ready to share!`, 'success');
@@ -209,7 +218,7 @@ export const useGoogleSync = (showToast, directoryHandle) => {
                 });
             }
         }, false);
-    };
+    }, [handleGoogleAuth, handleLogout, saveCloudMetadata, showToast]);
 
     // Initialize Cloud State & Listen for session
     useEffect(() => {

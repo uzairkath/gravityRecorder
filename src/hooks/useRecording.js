@@ -98,11 +98,29 @@ export const useRecording = ({
 
             console.log('Selected MIME Type:', finalMimeType);
 
-            const mediaRecorder = new MediaRecorder(recordingStream, {
-                mimeType: finalMimeType,
-                videoBitsPerSecond: bitrate,
-                audioBitsPerSecond: hasAudio ? 128000 : 0
-            });
+            let mediaRecorder;
+            try {
+                mediaRecorder = new MediaRecorder(recordingStream, {
+                    mimeType: finalMimeType,
+                    videoBitsPerSecond: bitrate,
+                    audioBitsPerSecond: hasAudio ? 128000 : 0
+                });
+            } catch (codecErr) {
+                // Some browsers (e.g. Opera GX on Windows) report isTypeSupported=true for MP4
+                // but throw at construction time. Fall back to the first supported WebM variant.
+                console.warn(`MediaRecorder rejected "${finalMimeType}", falling back to WebM:`, codecErr);
+                const webmFallbacks = [
+                    'video/webm;codecs=vp9,opus',
+                    'video/webm;codecs=vp8,opus',
+                    'video/webm',
+                ];
+                finalMimeType = webmFallbacks.find(t => MediaRecorder.isTypeSupported(t)) || '';
+                mediaRecorder = new MediaRecorder(recordingStream, {
+                    mimeType: finalMimeType,
+                    videoBitsPerSecond: bitrate,
+                    audioBitsPerSecond: hasAudio ? 128000 : 0
+                });
+            }
             mediaRecorderRef.current = mediaRecorder;
 
             chunksRef.current = [];
@@ -169,10 +187,12 @@ export const useRecording = ({
     const stopRecording = useCallback(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
             mediaRecorderRef.current.stop();
+            // onstop handler will drive status through processing → ready
+        } else {
+            setStatus('ready');
         }
         setIsRecording(false);
         setIsPaused(false);
-        setStatus('ready');
     }, []);
 
     const resetRecording = useCallback(() => {

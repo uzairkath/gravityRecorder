@@ -23,11 +23,7 @@ class MediaManager {
                     height: { max: height || 1080 },
                     frameRate: { ideal: 30, max: 30 }
                 },
-                audio: {
-                    echoCancellation: false,
-                    noiseSuppression: false,
-                    autoGainControl: false
-                }
+                audio: false
             });
         } catch (err) {
             console.error("Error getting camera stream:", err);
