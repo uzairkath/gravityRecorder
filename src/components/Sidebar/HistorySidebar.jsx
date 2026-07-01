@@ -140,7 +140,10 @@ export const HistorySidebar = ({
                                                             <span className="video-title">{file.name}</span>
                                                             <div className="video-actions">
                                                                 {uploadProgress[file.name] !== undefined ? (
-                                                                    <span className="upload-loader" title="Uploading...">⏳</span>
+                                                                    <span className="upload-progress-indicator" title="Uploading to Drive…">
+                                                                        <span className="upload-progress-dot"></span>
+                                                                        <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>Uploading…</span>
+                                                                    </span>
                                                                 ) : cloudRegistry[file.signature] ? (
                                                                     <button
                                                                         className="btn-cloud active"

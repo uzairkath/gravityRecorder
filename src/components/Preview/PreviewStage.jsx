@@ -1,5 +1,11 @@
 import React from 'react';
 
+const formatDuration = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+};
+
 export const PreviewStage = ({
     canvasRef,
     screenVideoRef,
@@ -10,8 +16,10 @@ export const PreviewStage = ({
     screenScale,
     recordingQuality,
     isRecording,
+    isPaused,
     status,
     countdown,
+    recordingDuration = 0,
     currentDimensions = { width: 0, height: 0 },
     handleMouseDown,
     handleMouseMove,
@@ -63,13 +71,20 @@ export const PreviewStage = ({
             )}
 
             {showPlaceholder && (
-                <div className="preview-placeholder">Sources Inactive — Enable Screen or Camera to start</div>
+                <div className="preview-placeholder">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35, marginBottom: '1rem' }}>
+                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                        <path d="M8 21h8M12 17v4" />
+                    </svg>
+                    <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>No sources active</div>
+                    <div style={{ opacity: 0.5, fontSize: '0.8rem' }}>Enable screen or camera to begin</div>
+                </div>
             )}
 
             {status === 'recording' && (
-                <div className="status-badge status-recording">
+                <div className={`status-badge status-recording${isPaused ? ' paused' : ''}`}>
                     <span className="status-dot"></span>
-                    REC {useCanvas ? 'CANVAS' : 'DIRECT'}
+                    {isPaused ? 'PAUSED' : `REC ${formatDuration(recordingDuration)}`}
                 </div>
             )}
 

@@ -36,16 +36,25 @@ const ScreenRecorder = () => {
         toggleScreen, toggleMic, toggleCamera, stopAll: stopStreams, changeCamera, changeMic
     } = useStreams(screenVideoRef, cameraVideoRef, setStatus);
 
-    const [webcamShape, setWebcamShape] = useState('circle');
-    const [webcamScale, setWebcamScale] = useState(0.40);
-    const [activeBg, setActiveBg] = useState('none');
-    const [screenScale, setScreenScale] = useState(1.0);
-    const [recordingQuality, setRecordingQuality] = useState('1080p');
+    const loadSetting = (key, fallback) => {
+        try { const v = localStorage.getItem('gr_' + key); return v !== null ? JSON.parse(v) : fallback; } catch { return fallback; }
+    };
+    const saveSetting = (key, value) => {
+        try { localStorage.setItem('gr_' + key, JSON.stringify(value)); } catch {}
+    };
+
+    const [webcamShape, setWebcamShape] = useState(() => loadSetting('webcamShape', 'circle'));
+    const [webcamScale, setWebcamScale] = useState(() => loadSetting('webcamScale', 0.40));
+    const [activeBg, setActiveBg] = useState(() => loadSetting('activeBg', 'none'));
+    const [screenScale, setScreenScale] = useState(() => loadSetting('screenScale', 1.0));
+    const [recordingQuality, setRecordingQuality] = useState(() => loadSetting('recordingQuality', '1080p'));
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [toast, setToast] = useState(null);
     const [highlightedFile, setHighlightedFile] = useState(null);
     const [pendingRecording, setPendingRecording] = useState(null);
-    const [recordingFormat, setRecordingFormat] = useState(getDefaultFormat());
+    const [recordingFormat, setRecordingFormat] = useState(() => loadSetting('recordingFormat', getDefaultFormat()));
+    const [recordingDuration, setRecordingDuration] = useState(0);
+    const durationTimerRef = useRef(null);
     const [countdown, setCountdown] = useState(null);
 
     const showToast = useCallback((title, message, type = 'info') => {
@@ -377,6 +386,41 @@ const ScreenRecorder = () => {
         }
     }, [isHistoryOpen, directoryHandle, isRecording, googleToken, auditCloudRegistry, loadCloudMetadata, syncLibrary]);
 
+    // Persist settings to localStorage whenever they change
+    useEffect(() => { saveSetting('webcamShape', webcamShape); }, [webcamShape]);
+    useEffect(() => { saveSetting('webcamScale', webcamScale); }, [webcamScale]);
+    useEffect(() => { saveSetting('activeBg', activeBg); }, [activeBg]);
+    useEffect(() => { saveSetting('screenScale', screenScale); }, [screenScale]);
+    useEffect(() => { saveSetting('recordingQuality', recordingQuality); }, [recordingQuality]);
+    useEffect(() => { saveSetting('recordingFormat', recordingFormat); }, [recordingFormat]);
+
+    // Recording duration timer
+    useEffect(() => {
+        if (isRecording && !isPaused) {
+            durationTimerRef.current = setInterval(() => setRecordingDuration(d => d + 1), 1000);
+        } else {
+            clearInterval(durationTimerRef.current);
+            if (!isRecording) setRecordingDuration(0);
+        }
+        return () => clearInterval(durationTimerRef.current);
+    }, [isRecording, isPaused]);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const onKey = (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.code === 'Space' && isRecording) {
+                e.preventDefault();
+                isPaused ? resumeRecording() : pauseRecording();
+            }
+            if (e.code === 'Escape' && isRecording) stopRecording();
+            if (e.code === 'KeyS' && !isRecording) toggleScreen();
+            if (e.code === 'KeyC' && !isRecording) toggleCamera();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [isRecording, isPaused, pauseRecording, resumeRecording, stopRecording, toggleScreen, toggleCamera]);
+
     const isLaunchingRef = useRef(false);
 
     const startRecording = useCallback(() => {
@@ -404,8 +448,8 @@ const ScreenRecorder = () => {
             <header className="header-section" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ visibility: 'hidden' }}>Spacer</div>
                 <div style={{ textAlign: 'center' }}>
-                    <h1>Screen Studio</h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Premium Recording Syncing with your PC</p>
+                    <h1>Gravity Recorder</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Private, local-first screen studio</p>
                 </div>
                 <button className="btn btn-outline" onClick={() => setIsHistoryOpen(!isHistoryOpen)}>
                     History {libraryFiles.length > 0 && `(${libraryFiles.length})`}
@@ -421,10 +465,12 @@ const ScreenRecorder = () => {
                 activeBg={activeBg}
                 screenScale={screenScale}
                 isRecording={isRecording}
+                isPaused={isPaused}
                 status={status}
                 countdown={countdown}
                 recordingQuality={recordingQuality}
                 currentDimensions={currentDimensions}
+                recordingDuration={recordingDuration}
                 handleMouseDown={handleMouseDown}
                 handleMouseMove={handleMouseMove}
                 handleMouseUp={handleMouseUp}
@@ -463,12 +509,11 @@ const ScreenRecorder = () => {
 
             <div className="mode-info">
                 <div className="status-dot" style={{ background: cameraStream ? 'var(--primary)' : 'var(--success)' }}></div>
-                <span>Current Mode: {cameraStream ? 'Optimized Canvas' : 'Direct Hardware'}</span>
+                <span>{cameraStream ? 'Studio Mode' : 'Direct Mode'}</span>
+                {(screenStream || cameraStream) && (
+                    <span style={{ opacity: 0.5, marginLeft: '0.5rem' }}>· S = screen · C = camera · Space = pause · Esc = stop</span>
+                )}
             </div>
-
-            <footer style={{ marginTop: 'auto', paddingTop: '4rem', color: 'var(--text-muted)', fontSize: '0.75rem', width: '100%', maxWidth: '600px', textAlign: 'center', lineHeight: '1.5' }}>
-                <p>© 2026 Gravity Labs. Built for performance and resilience.</p>
-            </footer>
 
             <HistorySidebar
                 isHistoryOpen={isHistoryOpen}

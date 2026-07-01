@@ -33,7 +33,8 @@ export const ControlBar = ({
     changeCamera,
     changeMic
 }) => {
-    const [activePanel, setActivePanel] = React.useState(null); // 'camera', 'bg', 'quality', 'format'
+    const [activePanel, setActivePanel] = React.useState(null);
+    const [showAdvanced, setShowAdvanced] = React.useState(false);
     const supportedFormats = React.useMemo(() => getSupportedFormats(), []);
     const [showMicOptions, setShowMicOptions] = React.useState(false);
     const [showCameraOptions, setShowCameraOptions] = React.useState(false);
@@ -41,27 +42,26 @@ export const ControlBar = ({
     const [micID, setMicID] = React.useState('');
     const [cameras, setCameras] = React.useState([]);
     const [microphones, setMicrophones] = React.useState([]);
+
     const togglePanel = (panel) => {
         setActivePanel(activePanel === panel ? null : panel);
     };
+
     const getCameras = async () => {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === 'videoinput');
-            const cameras = videoDevices.map(device => ({
-                label: device.label,
-                deviceId: device.deviceId,
-            }));
-            return cameras;
+            return devices
+                .filter(device => device.kind === 'videoinput')
+                .map(device => ({ label: device.label, deviceId: device.deviceId }));
         } catch (error) {
             console.error("Failed to enumerate devices:", error);
         }
     };
 
+    const currentFormat = EXPORT_FORMATS.find(f => f.id === recordingFormat);
 
     return (
         <div className="control-bar-container">
-            {/* Unified Settings Popover */}
             {activePanel && !isRecording && (
                 <div className="settings-popover">
                     {activePanel === 'camera' && (
@@ -70,7 +70,7 @@ export const ControlBar = ({
                                 <span className="setting-label">Webcam Frame</span>
                                 <div style={{ display: 'flex', gap: '0.4rem' }}>
                                     {['circle', 'rounded-rect', 'square'].map(s => (
-                                        <button key={s} onClick={() => { console.log('Shape clicked:', s); setWebcamShape(s); }}
+                                        <button key={s} onClick={() => setWebcamShape(s)}
                                             className={`btn-icon ${webcamShape === s ? 'active' : ''}`}
                                             title={s}>
                                             <div className={`shape-preview ${s}`}></div>
@@ -97,7 +97,7 @@ export const ControlBar = ({
                                         { label: 'M', val: 0.40 },
                                         { label: 'L', val: 0.55 }
                                     ].map(s => (
-                                        <button key={s.label} onClick={() => { console.log('Size clicked:', s.val); setWebcamScale(s.val); }}
+                                        <button key={s.label} onClick={() => setWebcamScale(s.val)}
                                             className={`btn-small ${webcamScale === s.val ? 'active' : ''}`}>
                                             {s.label}
                                         </button>
@@ -119,7 +119,7 @@ export const ControlBar = ({
                                 }}>
                                     {BACKGROUND_PRESETS.map(p => (
                                         <button key={p.id}
-                                            onClick={() => { console.log('BG clicked:', p.id); setActiveBg(p.id); }}
+                                            onClick={() => setActiveBg(p.id)}
                                             className={`btn-icon ${activeBg === p.id ? 'active' : ''}`}
                                             title={p.name}
                                             style={{
@@ -141,11 +141,11 @@ export const ControlBar = ({
                                 <span className="setting-label">Screen Layout</span>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     {[
-                                        { label: 'Full Display', val: 1.0, desc: 'Maximum visibility' },
-                                        { label: 'Framed View', val: 0.90, desc: 'Elegant margins' },
-                                        { label: 'Compact', val: 0.82, desc: 'Focus on webcam' }
+                                        { label: 'Full Display', val: 1.0 },
+                                        { label: 'Framed View', val: 0.90 },
+                                        { label: 'Compact', val: 0.82 }
                                     ].map(s => (
-                                        <button key={s.label} onClick={() => { console.log('Layout clicked:', s.val); setScreenScale(s.val); }}
+                                        <button key={s.label} onClick={() => setScreenScale(s.val)}
                                             className={`btn-small ${screenScale === s.val ? 'active' : ''}`}
                                             style={{ justifyContent: 'space-between', padding: '0.6rem 1rem', width: '100%' }}>
                                             <span>{s.label}</span>
@@ -163,7 +163,7 @@ export const ControlBar = ({
                                 <span className="setting-label">Recording Quality</span>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     {Object.entries(qualityPresets).map(([key, val]) => (
-                                        <button key={key} onClick={() => { console.log('Quality clicked:', key); setRecordingQuality(key); }}
+                                        <button key={key} onClick={() => setRecordingQuality(key)}
                                             className={`btn-small ${recordingQuality === key ? 'active' : ''}`}>
                                             {val.label}
                                         </button>
@@ -177,26 +177,33 @@ export const ControlBar = ({
                         <div className="setting-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '1.5rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                                 <span className="setting-label">Export Format</span>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                     {supportedFormats.map(f => (
-                                        <button key={f.id} onClick={() => { console.log('Format clicked:', f.id); setRecordingFormat(f.id); }}
-                                            className={`btn-small ${recordingFormat === f.id ? 'active' : ''}`}>
+                                        <button key={f.id} onClick={() => setRecordingFormat(f.id)}
+                                            className={`btn-small ${recordingFormat === f.id ? 'active' : ''}`}
+                                            title={f.description}>
                                             {f.label}
                                         </button>
                                     ))}
                                 </div>
+                                {currentFormat && (
+                                    <span style={{ fontSize: '0.75rem', opacity: 0.55, marginTop: '0.25rem' }}>
+                                        {currentFormat.description}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     )}
 
-                    <button className="popover-close" onClick={() => { console.log('Closing panel'); setActivePanel(null); }}>✕</button>
+                    <button className="popover-close" onClick={() => setActivePanel(null)}>✕</button>
                 </div>
             )}
 
             <div className="control-bar">
                 <div className="source-toggles">
                     <button className={`btn-pill ${screenStream ? 'active' : ''}`}
-                        onClick={toggleScreen} disabled={isRecording}>
+                        onClick={toggleScreen} disabled={isRecording}
+                        title="Toggle screen capture">
                         {screenStream ? '● Screen' : 'Screen'}
                     </button>
                     <div className="grid">
@@ -210,34 +217,29 @@ export const ControlBar = ({
                                 } else {
                                     togglePanel('camera');
                                 }
-                            }} disabled={isRecording}>
+                            }} disabled={isRecording}
+                            title="Toggle webcam">
                             {cameraStream ? '● Camera' : 'Camera'}
                         </button>
-                        <button className="dropDownBtn" onClick={() => {
-                            setShowCameraOptions(!showCameraOptions)
-                        }}
-                            disabled={isRecording}>
+                        <button className="dropDownBtn" onClick={() => setShowCameraOptions(!showCameraOptions)}
+                            disabled={isRecording} title="Select camera device">
                             <ChevronDown />
                         </button>
-                        {
-                            showCameraOptions && cameras.length > 0 && (
-                                <div className="dropDownMenu" style={{ left: "4rem", height: cameras.length > 2 ? '170px' : 'fit-content', overflowY: cameras.length > 2 ? 'scroll' : 'visible' }}>
-                                    <div  >
-                                        {cameras.map(type => (
-
-                                            <button key={type.deviceId} onClick={async () => {
-                                                await changeCamera(type.deviceId);
-                                                setCameraOption(type.deviceId);
-                                            }}
-                                                className={`btn-small  ${cameraOption === type.deviceId ? 'active' : ''} dropDownElement`}>
-                                                {type.label}
-                                            </button>
-
-                                        ))}
-                                    </div>
+                        {showCameraOptions && cameras.length > 0 && (
+                            <div className="dropDownMenu" style={{ left: "4rem", height: cameras.length > 2 ? '170px' : 'fit-content', overflowY: cameras.length > 2 ? 'scroll' : 'visible' }}>
+                                <div>
+                                    {cameras.map(type => (
+                                        <button key={type.deviceId} onClick={async () => {
+                                            await changeCamera(type.deviceId);
+                                            setCameraOption(type.deviceId);
+                                        }}
+                                            className={`btn-small ${cameraOption === type.deviceId ? 'active' : ''} dropDownElement`}>
+                                            {type.label}
+                                        </button>
+                                    ))}
                                 </div>
-                            )
-                        }
+                            </div>
+                        )}
                     </div>
                     <div className='grid'>
                         <button className={`btn-pill ${audioStream ? 'active' : ''}`}
@@ -253,48 +255,64 @@ export const ControlBar = ({
                                 } else {
                                     toggleMic();
                                 }
-                            }} disabled={isRecording}>
+                            }} disabled={isRecording}
+                            title="Toggle microphone">
                             {audioStream ? '● Mic' : 'Mic'}
                         </button>
-                        <button className="dropDownBtn" onClick={() => {
-                            setShowMicOptions(!showMicOptions)
-                        }} disabled={isRecording}>
+                        <button className="dropDownBtn" onClick={() => setShowMicOptions(!showMicOptions)}
+                            disabled={isRecording} title="Select microphone device">
                             <ChevronDown />
                         </button>
-                        {
-                            showMicOptions && microphones.length > 0 && (
-                                <div style={{ height: microphones.length > 2 ? '170px' : 'fit-content', overflowY: microphones.length > 2 ? 'scroll' : 'visible' }} className='dropDownMenu'>
-                                    <div>
-                                        {microphones.map(type => (
-                                            <button key={type.deviceId} onClick={async () => {
-                                                await changeMic(type.deviceId);
-                                                setMicID(type.deviceId);
-                                            }}
-                                                className={`btn-small  ${micID === type.deviceId ? 'active' : ''} dropDownElement`}
-                                            >
-                                                {type.label}
-                                            </button>
-                                        ))}
-                                    </div>
+                        {showMicOptions && microphones.length > 0 && (
+                            <div style={{ height: microphones.length > 2 ? '170px' : 'fit-content', overflowY: microphones.length > 2 ? 'scroll' : 'visible' }} className='dropDownMenu'>
+                                <div>
+                                    {microphones.map(type => (
+                                        <button key={type.deviceId} onClick={async () => {
+                                            await changeMic(type.deviceId);
+                                            setMicID(type.deviceId);
+                                        }}
+                                            className={`btn-small ${micID === type.deviceId ? 'active' : ''} dropDownElement`}>
+                                            {type.label}
+                                        </button>
+                                    ))}
                                 </div>
-                            )
-                        }
+                            </div>
+                        )}
                     </div>
+
                     <div className="vertical-divider" style={{ width: '1px', background: 'var(--glass-border)', margin: '0 0.2rem' }}></div>
-                    <button className={`btn-pill ${activeBg !== 'none' || screenScale !== 1.0 || activePanel === 'bg' ? 'active' : ''}`}
-                        onClick={() => togglePanel('bg')} disabled={isRecording}>
-                        {activeBg !== 'none' || screenScale !== 1.0 ? '🎨 Styled' : '🎨 BG'}
+
+                    <button
+                        className={`btn-pill ${showAdvanced ? 'active' : ''}`}
+                        onClick={() => { setShowAdvanced(v => !v); setActivePanel(null); }}
+                        disabled={isRecording}
+                        title="Show advanced options"
+                    >
+                        Advanced {showAdvanced ? '▲' : '▾'}
                     </button>
-                    <div className="vertical-divider" style={{ width: '1px', background: 'var(--glass-border)', margin: '0 0.2rem' }}></div>
-                    <button className={`btn-pill ${activePanel === 'format' ? 'active' : ''}`}
-                        onClick={() => togglePanel('format')} disabled={isRecording}>
-                        🎬 {EXPORT_FORMATS.find(f => f.id === recordingFormat)?.label?.split(' ')[0] || 'Format'}
-                    </button>
-                    <div className="vertical-divider" style={{ width: '1px', background: 'var(--glass-border)', margin: '0 0.2rem' }}></div>
-                    <button className={`btn-pill ${activePanel === 'quality' ? 'active' : ''}`}
-                        onClick={() => togglePanel('quality')} disabled={isRecording}>
-                        ⚙️ {recordingQuality}
-                    </button>
+
+                    {showAdvanced && (
+                        <>
+                            <div className="vertical-divider" style={{ width: '1px', background: 'var(--glass-border)', margin: '0 0.2rem' }}></div>
+                            <button className={`btn-pill ${activeBg !== 'none' || screenScale !== 1.0 || activePanel === 'bg' ? 'active' : ''}`}
+                                onClick={() => togglePanel('bg')} disabled={isRecording}
+                                title="Background and layout">
+                                {activeBg !== 'none' || screenScale !== 1.0 ? '🎨 Styled' : '🎨 BG'}
+                            </button>
+                            <div className="vertical-divider" style={{ width: '1px', background: 'var(--glass-border)', margin: '0 0.2rem' }}></div>
+                            <button className={`btn-pill ${activePanel === 'format' ? 'active' : ''}`}
+                                onClick={() => togglePanel('format')} disabled={isRecording}
+                                title={currentFormat?.description || 'Export format'}>
+                                🎬 {currentFormat?.label || 'Format'}
+                            </button>
+                            <div className="vertical-divider" style={{ width: '1px', background: 'var(--glass-border)', margin: '0 0.2rem' }}></div>
+                            <button className={`btn-pill ${activePanel === 'quality' ? 'active' : ''}`}
+                                onClick={() => togglePanel('quality')} disabled={isRecording}
+                                title="Recording quality">
+                                ⚙️ {recordingQuality}
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 <div className="main-actions">
@@ -327,7 +345,7 @@ export const ControlBar = ({
                     <button className="btn-icon-bg" onClick={() => {
                         setActivePanel(null);
                         handleStopAll();
-                    }} title="Reset">✕</button>
+                    }} title="Reset all sources">✕</button>
                 </div>
             </div>
         </div>

@@ -1,8 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --primary: #8b5cf6;
-  --primary-hover: #7c3aed;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+  --primary-glow: rgba(59, 130, 246, 0.23);
+  --primary-subtle: rgba(59, 130, 246, 0.15);
+  --primary-pulse: rgba(59, 130, 246, 0.4);
   --danger: #ef4444;
   --success: #10b981;
   --warning: #f59e0b;
@@ -20,7 +24,7 @@
   --glass-hover: rgba(255, 255, 255, 0.12);
   --glass-border: rgba(255, 255, 255, 0.12);
   --nav-bg: rgba(15, 23, 42, 0.8);
-  --gradient-start: #1e1b4b;
+  --gradient-start: #0c1a3e;
 }
 
 [data-theme='light'] {
@@ -33,7 +37,7 @@
   --glass-hover: rgba(0, 0, 0, 0.09);
   --glass-border: rgba(0, 0, 0, 0.15);
   --nav-bg: rgba(255, 255, 255, 0.85);
-  --gradient-start: #f1f5f9;
+  --gradient-start: #eff6ff;
 }
 
 * {
@@ -172,13 +176,13 @@ body {
 .btn-primary {
   background: var(--primary);
   color: white;
-  box-shadow: 0 4px 14px 0 rgba(139, 92, 246, 0.39);
+  box-shadow: var(--primary-shadow);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.23);
+  box-shadow: 0 6px 20px var(--primary-glow);
 }
 
 .btn-record {
@@ -394,7 +398,7 @@ body {
 .btn-pill.active {
   background: var(--primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 4px 12px var(--primary-subtle);
 }
 
 .main-actions {
@@ -417,7 +421,7 @@ body {
 }
 
 .btn-icon.active {
-  background: rgba(139, 92, 246, 0.2);
+  background: var(--primary-subtle);
   border-color: var(--primary);
 }
 
@@ -561,15 +565,15 @@ body {
 
 @keyframes successPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+    box-shadow: 0 0 0 0 var(--primary-pulse);
   }
 
   70% {
-    box-shadow: 0 0 0 15px rgba(139, 92, 246, 0);
+    box-shadow: 0 0 0 15px transparent;
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 
@@ -916,7 +920,7 @@ body {
   font-size: 15rem;
   font-weight: 900;
   color: white;
-  text-shadow: 0 0 40px rgba(100, 108, 255, 0.8);
+  text-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
   animation: countdownPulse 1s infinite;
   font-family: 'Outfit', sans-serif;
 }
@@ -948,4 +952,84 @@ body {
   object-fit: contain;
   border-radius: 12px;
   background: #000;
+}
+
+/* Idle preview placeholder animation */
+.preview-placeholder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-deep), #0c1a3e);
+  background-size: 300% 300%;
+  animation: idleGradient 10s ease infinite;
+}
+
+.preview-placeholder-icon {
+  font-size: 2.5rem;
+  opacity: 0.3;
+}
+
+@keyframes idleGradient {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Upload progress indicator */
+.upload-progress-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.upload-progress-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: pulse 1.2s infinite;
+  flex-shrink: 0;
+}
+
+/* Keyboard shortcut hint */
+.kbd-hint {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-top: 0.25rem;
+}
+
+/* Custom scrollbars */
+.sidebar-content::-webkit-scrollbar,
+.modal-content::-webkit-scrollbar,
+.dropDownMenu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-track,
+.modal-content::-webkit-scrollbar-track,
+.dropDownMenu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb,
+.modal-content::-webkit-scrollbar-thumb,
+.dropDownMenu::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 100px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover,
+.modal-content::-webkit-scrollbar-thumb:hover,
+.dropDownMenu::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
