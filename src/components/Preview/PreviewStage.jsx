@@ -21,6 +21,7 @@ export const PreviewStage = ({
     countdown,
     recordingDuration = 0,
     currentDimensions = { width: 0, height: 0 },
+    zoomEnabled = false,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp
@@ -85,6 +86,16 @@ export const PreviewStage = ({
                 <div className={`status-badge status-recording${isPaused ? ' paused' : ''}`}>
                     <span className="status-dot"></span>
                     {isPaused ? 'PAUSED' : `REC ${formatDuration(recordingDuration)}`}
+                </div>
+            )}
+
+            {isRecording && zoomEnabled && (
+                <div className="status-badge" style={{
+                    top: 'auto', bottom: '0.75rem', right: '0.75rem', left: 'auto',
+                    background: 'rgba(59,130,246,0.85)', color: '#fff',
+                    fontSize: '0.7rem', gap: '0.35rem'
+                }}>
+                    <span style={{ fontSize: '0.85rem' }}>⊕</span> ZOOM
                 </div>
             )}
 

@@ -27,6 +27,16 @@ export const HistorySidebar = ({
     startRename,
     deleteFile
 }) => {
+    const [copiedFile, setCopiedFile] = React.useState(null);
+
+    const copyShareLink = (e, signature, fileName) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(cloudRegistry[signature].shareLink).then(() => {
+            setCopiedFile(fileName);
+            setTimeout(() => setCopiedFile(null), 2000);
+        });
+    };
+
     return (
         <div className={`sidebar ${isHistoryOpen ? 'open' : ''}`}>
             {isHistoryOpen && (
@@ -145,14 +155,20 @@ export const HistorySidebar = ({
                                                                         <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>Uploading…</span>
                                                                     </span>
                                                                 ) : cloudRegistry[file.signature] ? (
-                                                                    <button
-                                                                        className="btn-cloud active"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            window.open(cloudRegistry[file.signature].shareLink, '_blank');
-                                                                        }}
-                                                                        title="Open Share Link"
-                                                                    >🔗</button>
+                                                                    <>
+                                                                        <button
+                                                                            className="btn-cloud active"
+                                                                            onClick={(e) => copyShareLink(e, file.signature, file.name)}
+                                                                            title={copiedFile === file.name ? 'Copied!' : 'Copy share link'}
+                                                                            style={copiedFile === file.name ? { minWidth: '54px', fontSize: '0.6rem' } : {}}
+                                                                        >{copiedFile === file.name ? '✓ Copied' : '🔗'}</button>
+                                                                        <button
+                                                                            className="btn-cloud"
+                                                                            onClick={(e) => { e.stopPropagation(); window.open(cloudRegistry[file.signature].shareLink, '_blank'); }}
+                                                                            title="Open in new tab"
+                                                                            style={{ fontSize: '0.7rem', opacity: 0.6 }}
+                                                                        >↗</button>
+                                                                    </>
                                                                 ) : (
                                                                     <button
                                                                         className="btn-cloud"

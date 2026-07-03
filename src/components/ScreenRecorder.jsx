@@ -57,10 +57,51 @@ const ScreenRecorder = () => {
     const durationTimerRef = useRef(null);
     const [countdown, setCountdown] = useState(null);
 
+    // Mic volume gain (Web Audio API)
+    const audioCtxRef = useRef(null);
+    const gainNodeRef = useRef(null);
+    const [processedAudioStream, setProcessedAudioStream] = useState(null);
+    const [micVolume, setMicVolume] = useState(() => loadSetting('micVolume', 1.0));
+
+    // Webcam depth blur + zoom refs (refs so renderFrame reads latest without recreation)
+    const [webcamDepthBlur, setWebcamDepthBlur] = useState(() => loadSetting('webcamDepthBlur', false));
+    const webcamDepthBlurRef = useRef(webcamDepthBlur);
+    const [zoomEnabled, setZoomEnabled] = useState(false);
+    const zoomEnabledRef = useRef(false);
+    const zoomCenterRef = useRef({ x: 0.5, y: 0.5 });
+
     const showToast = useCallback((title, message, type = 'info') => {
         setToast({ title, message, type });
         setTimeout(() => setToast(null), 4000);
     }, []);
+
+    // Build a GainNode pipeline whenever the mic stream changes
+    useEffect(() => {
+        if (audioCtxRef.current) {
+            audioCtxRef.current.close();
+            audioCtxRef.current = null;
+            gainNodeRef.current = null;
+        }
+        setProcessedAudioStream(null);
+        if (!audioStream) return;
+
+        const ctx = new AudioContext();
+        audioCtxRef.current = ctx;
+        const source = ctx.createMediaStreamSource(audioStream);
+        const gain = ctx.createGain();
+        gain.gain.value = micVolume;
+        gainNodeRef.current = gain;
+        const dest = ctx.createMediaStreamDestination();
+        source.connect(gain);
+        gain.connect(dest);
+        setProcessedAudioStream(dest.stream);
+
+        return () => { ctx.close(); audioCtxRef.current = null; gainNodeRef.current = null; };
+    }, [audioStream]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => { if (gainNodeRef.current) gainNodeRef.current.gain.value = micVolume; }, [micVolume]);
+    useEffect(() => { webcamDepthBlurRef.current = webcamDepthBlur; }, [webcamDepthBlur]);
+    useEffect(() => { zoomEnabledRef.current = zoomEnabled; }, [zoomEnabled]);
 
     const {
         directoryHandle, setDirectoryHandle,
@@ -92,7 +133,9 @@ const ScreenRecorder = () => {
     const {
         isRecording, isPaused, startRecording: startMediaRecording, pauseRecording, resumeRecording, stopRecording, resetRecording
     } = useRecording({
-        screenStream, audioStream, cameraStream,
+        screenStream,
+        audioStream: processedAudioStream || audioStream,
+        cameraStream,
         activeBg, screenScale, canvasRef,
         recordingQuality,
         bitrate: QUALITY_PRESETS[recordingQuality].bitrate,
@@ -241,7 +284,7 @@ const ScreenRecorder = () => {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // 2. Draw Screen
+        // 2. Draw Screen (with optional zoom transform)
         if (screenStream && screenVideoRef.current.readyState >= 2) {
             const videoData = screenVideoRef.current;
             const vWidth = videoData.videoWidth;
@@ -263,6 +306,16 @@ const ScreenRecorder = () => {
             const sx = (canvas.width - sw) / 2;
             const sy = (canvas.height - sh) / 2;
 
+            const zf = zoomEnabledRef.current ? 1.6 : 1.0;
+            if (zf > 1.0) {
+                const zcx = zoomCenterRef.current.x * canvas.width;
+                const zcy = zoomCenterRef.current.y * canvas.height;
+                ctx.save();
+                ctx.translate(zcx, zcy);
+                ctx.scale(zf, zf);
+                ctx.translate(-zcx, -zcy);
+            }
+
             if (screenScale < 1.0) {
                 ctx.save();
                 ctx.beginPath();
@@ -273,9 +326,11 @@ const ScreenRecorder = () => {
             } else {
                 ctx.drawImage(videoData, sx, sy, sw, sh);
             }
+
+            if (zf > 1.0) ctx.restore();
         }
 
-        // 3. Draw Camera Bubble
+        // 3. Draw Camera Bubble (with optional depth blur halo)
         if (cameraStream && cameraVideoRef.current.readyState >= 2) {
             const webcamVideo = cameraVideoRef.current;
             const vWidth = webcamVideo.videoWidth;
@@ -289,6 +344,18 @@ const ScreenRecorder = () => {
             } else {
                 dw = bubbleSize; dh = bubbleSize / vAspect;
                 dx = x; dy = y - (dh - bubbleSize) / 2;
+            }
+
+            // Depth blur halo: blurred wider copy beneath the clipped bubble
+            if (webcamDepthBlurRef.current) {
+                const pad = bubbleSize * 0.35;
+                ctx.save();
+                ctx.filter = 'blur(18px)';
+                ctx.globalAlpha = 0.55;
+                ctx.drawImage(webcamVideo, dx - pad / 2, dy - pad / 2, dw + pad, dh + pad);
+                ctx.globalAlpha = 1.0;
+                ctx.filter = 'none';
+                ctx.restore();
             }
 
             if (webcamShape !== 'square') {
@@ -393,6 +460,23 @@ const ScreenRecorder = () => {
     useEffect(() => { saveSetting('screenScale', screenScale); }, [screenScale]);
     useEffect(() => { saveSetting('recordingQuality', recordingQuality); }, [recordingQuality]);
     useEffect(() => { saveSetting('recordingFormat', recordingFormat); }, [recordingFormat]);
+    useEffect(() => { saveSetting('micVolume', micVolume); }, [micVolume]);
+    useEffect(() => { saveSetting('webcamDepthBlur', webcamDepthBlur); }, [webcamDepthBlur]);
+
+    // Track cursor on canvas for zoom center
+    useEffect(() => {
+        const onMove = (e) => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            zoomCenterRef.current = {
+                x: Math.max(0.05, Math.min(0.95, (e.clientX - rect.left) / rect.width)),
+                y: Math.max(0.05, Math.min(0.95, (e.clientY - rect.top) / rect.height))
+            };
+        };
+        document.addEventListener('mousemove', onMove, { passive: true });
+        return () => document.removeEventListener('mousemove', onMove);
+    }, []);
 
     // Recording duration timer
     useEffect(() => {
@@ -416,6 +500,10 @@ const ScreenRecorder = () => {
             if (e.code === 'Escape' && isRecording) stopRecording();
             if (e.code === 'KeyS' && !isRecording) toggleScreen();
             if (e.code === 'KeyC' && !isRecording) toggleCamera();
+            if (e.code === 'KeyZ' && isRecording) {
+                e.preventDefault();
+                setZoomEnabled(z => !z);
+            }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
@@ -471,6 +559,7 @@ const ScreenRecorder = () => {
                 recordingQuality={recordingQuality}
                 currentDimensions={currentDimensions}
                 recordingDuration={recordingDuration}
+                zoomEnabled={zoomEnabled}
                 handleMouseDown={handleMouseDown}
                 handleMouseMove={handleMouseMove}
                 handleMouseUp={handleMouseUp}
@@ -487,11 +576,15 @@ const ScreenRecorder = () => {
                 setWebcamShape={setWebcamShape}
                 webcamScale={webcamScale}
                 setWebcamScale={setWebcamScale}
+                webcamDepthBlur={webcamDepthBlur}
+                setWebcamDepthBlur={setWebcamDepthBlur}
                 screenScale={screenScale}
                 setScreenScale={setScreenScale}
                 toggleScreen={toggleScreen}
                 toggleCamera={toggleCamera}
                 toggleMic={toggleMic}
+                micVolume={micVolume}
+                setMicVolume={setMicVolume}
                 recordingQuality={recordingQuality}
                 setRecordingQuality={setRecordingQuality}
                 qualityPresets={QUALITY_PRESETS}
@@ -502,6 +595,8 @@ const ScreenRecorder = () => {
                 resumeRecording={resumeRecording}
                 stopRecording={stopRecording}
                 isPaused={isPaused}
+                zoomEnabled={zoomEnabled}
+                setZoomEnabled={setZoomEnabled}
                 handleStopAll={handleStopAll}
                 changeCamera={changeCamera}
                 changeMic={changeMic}
@@ -510,8 +605,11 @@ const ScreenRecorder = () => {
             <div className="mode-info">
                 <div className="status-dot" style={{ background: cameraStream ? 'var(--primary)' : 'var(--success)' }}></div>
                 <span>{cameraStream ? 'Studio Mode' : 'Direct Mode'}</span>
-                {(screenStream || cameraStream) && (
-                    <span style={{ opacity: 0.5, marginLeft: '0.5rem' }}>· S = screen · C = camera · Space = pause · Esc = stop</span>
+                {(screenStream || cameraStream) && !isRecording && (
+                    <span style={{ opacity: 0.5, marginLeft: '0.5rem' }}>· S = screen · C = camera</span>
+                )}
+                {isRecording && (
+                    <span style={{ opacity: 0.5, marginLeft: '0.5rem' }}>· Space = pause · Z = zoom · Esc = stop</span>
                 )}
             </div>
 

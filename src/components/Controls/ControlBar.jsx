@@ -13,11 +13,15 @@ export const ControlBar = ({
     setWebcamShape,
     webcamScale,
     setWebcamScale,
+    webcamDepthBlur,
+    setWebcamDepthBlur,
     screenScale,
     setScreenScale,
     toggleScreen,
     toggleCamera,
     toggleMic,
+    micVolume,
+    setMicVolume,
     setActiveBg,
     recordingQuality,
     setRecordingQuality,
@@ -27,6 +31,8 @@ export const ControlBar = ({
     resumeRecording,
     stopRecording,
     isPaused,
+    zoomEnabled,
+    setZoomEnabled,
     handleStopAll,
     recordingFormat,
     setRecordingFormat,
@@ -65,24 +71,36 @@ export const ControlBar = ({
             {activePanel && !isRecording && (
                 <div className="settings-popover">
                     {activePanel === 'camera' && (
-                        <div className="setting-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '1.5rem' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                <span className="setting-label">Webcam Frame</span>
-                                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                    {['circle', 'rounded-rect', 'square'].map(s => (
-                                        <button key={s} onClick={() => setWebcamShape(s)}
-                                            className={`btn-icon ${webcamShape === s ? 'active' : ''}`}
-                                            title={s}>
-                                            <div className={`shape-preview ${s}`}></div>
+                        <div className="setting-group" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: '1.5rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                    <span className="setting-label">Webcam Frame</span>
+                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                        {['circle', 'rounded-rect', 'square'].map(s => (
+                                            <button key={s} onClick={() => setWebcamShape(s)}
+                                                className={`btn-icon ${webcamShape === s ? 'active' : ''}`}
+                                                title={s}>
+                                                <div className={`shape-preview ${s}`}></div>
+                                            </button>
+                                        ))}
+                                        <div style={{ width: '1px', background: 'var(--glass-border)', margin: '0 0.4rem' }}></div>
+                                        <button
+                                            onClick={() => { toggleCamera(); setActivePanel(null); }}
+                                            className="btn-danger-minimal"
+                                            title="Turn Off Camera"
+                                        >
+                                            Disable
                                         </button>
-                                    ))}
-                                    <div style={{ width: '1px', background: 'var(--glass-border)', margin: '0 0.4rem' }}></div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                    <span className="setting-label">Effects</span>
                                     <button
-                                        onClick={() => { toggleCamera(); setActivePanel(null); }}
-                                        className="btn-danger-minimal"
-                                        title="Turn Off Camera"
+                                        className={`btn-small ${webcamDepthBlur ? 'active' : ''}`}
+                                        onClick={() => setWebcamDepthBlur(v => !v)}
+                                        title="Bokeh glow halo around camera bubble"
                                     >
-                                        Disable
+                                        {webcamDepthBlur ? '✓ Depth Blur' : 'Depth Blur'}
                                     </button>
                                 </div>
                             </div>
@@ -102,6 +120,31 @@ export const ControlBar = ({
                                             {s.label}
                                         </button>
                                     ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activePanel === 'mic' && (
+                        <div className="setting-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '1.5rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                <span className="setting-label">Mic Volume</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <input
+                                        type="range" min="0" max="2" step="0.05"
+                                        value={micVolume}
+                                        onChange={e => setMicVolume(parseFloat(e.target.value))}
+                                        style={{ width: '130px', accentColor: 'var(--primary)' }}
+                                    />
+                                    <span style={{ fontSize: '0.8rem', minWidth: '3.5ch', fontVariantNumeric: 'tabular-nums' }}>
+                                        {Math.round(micVolume * 100)}%
+                                    </span>
+                                    <div style={{ width: '1px', height: '20px', background: 'var(--glass-border)' }}></div>
+                                    <button
+                                        onClick={() => { toggleMic(); setActivePanel(null); }}
+                                        className="btn-danger-minimal"
+                                        title="Turn Off Mic"
+                                    >Disable</button>
                                 </div>
                             </div>
                         </div>
@@ -253,10 +296,10 @@ export const ControlBar = ({
                                     }));
                                     setMicrophones(audios);
                                 } else {
-                                    toggleMic();
+                                    togglePanel('mic');
                                 }
                             }} disabled={isRecording}
-                            title="Toggle microphone">
+                            title={audioStream ? 'Mic settings' : 'Toggle microphone'}>
                             {audioStream ? '● Mic' : 'Mic'}
                         </button>
                         <button className="dropDownBtn" onClick={() => setShowMicOptions(!showMicOptions)}
@@ -328,7 +371,15 @@ export const ControlBar = ({
                                     Start Recording
                                 </button>
                             ) : (
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <button
+                                        className={`btn-pill ${zoomEnabled ? 'active' : ''}`}
+                                        onClick={() => setZoomEnabled(z => !z)}
+                                        title="Zoom in (Z key) — hover canvas to set focus point"
+                                        style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                                    >
+                                        {zoomEnabled ? '⊖ Zoom' : '⊕ Zoom'}
+                                    </button>
                                     <button className={`btn ${isPaused ? 'btn-primary' : 'btn-outline'}`}
                                         onClick={isPaused ? resumeRecording : pauseRecording}
                                         style={{ minWidth: '100px', justifyContent: 'center' }}>
